@@ -1,0 +1,445 @@
+---
+title: "Miniproject"
+author: "Poorvi Ashok"
+date: "2023-02-13"
+output: word_document
+---
+
+
+```{r libraries, results='hide'}
+require(dplyr)
+require(tidyr)
+require(purrr)
+require(ggplot2)
+require(usdm)
+require(knitr)
+require(sjPlot)
+require(ggeffects)
+require(cowplot)
+```
+The dataset containing selected Environmental, Social and Governance (ESG) variables (mentioned below) for countries was downloaded from the World Bank Sovereign ESG Data Portal and input. Additionally, datasets containing other socio-political variables (mentioned below) for countries were also downloaded from the World Bank DataBank. Climate Change Performance Index (CCPI) data for countries was obtained and input from the CCPI website. The CCPI data was obtained in a pdf format and then converted into a csv format.
+
+World Bank DataBank: https://databank.worldbank.org/source/environment-social-and-governance?preview=on. 
+CCPI Website: https://ccpi.org/download/climate-change-performance-index-2023/
+
+Variables obtained from World Bank ESG Data Portal: (INSERT)
+Socio-economic variables obtained from World Bank DataBank: National Income per Capita (US$), GDP per Capita (US$), Population Growth (%), Sex Ratio
+
+```{r input datasets, results='hide'}
+#setting working directory
+setwd("/Users/tp/Desktop/Miniproject")
+
+#input ESG data
+data_t <- read.csv('ESG.csv')
+summary(data_t)
+str(data_t)
+
+#input CCPI data
+CCPI <- read.csv('CCPI New.csv')
+summary(CCPI)
+str(CCPI)
+
+#input national income per capita
+NI <- read.csv('National Income Per Capita.csv')
+summary(NI)
+str(NI)
+
+#input GDP per capita 
+GC <- read.csv('GDP Per Capita.csv')
+summary(GC)
+str(GC)
+
+#input population growth dataset
+PG <- read.csv('Population Growth.csv')
+summary(PG)
+str(PG)
+
+#input sex ratio dataset
+SR <- read.csv('Sex Ratio.csv')
+summary(SR)
+str(SR)
+```
+Data wrangling was performed on the ESG dataset to contain the country name and corresponding values for the chosen ESG variables.
+
+```{r data cleaning - ESG Dataset, results='hide'}
+#ESG Data
+#selecting only country name, ESG variable name and 2019 data from ESG dataset
+data <- subset(data_t, select=-c(Country.Code, Series.Code, 
+                                 X2013..YR2013.:X2018..YR2018., 
+                                 X2020..YR2020.:X2022..YR2022.))
+summary(data)
+head(data)
+
+#Pivoting the dataframe 
+dataf <- pivot_wider(data, names_from = 'Series.Name', 
+                        values_from = 'X2019..YR2019.')
+summary(dataf)
+head(dataf)
+
+#renaming the colnames
+names1 <- c('Country', 'Welfare_Aggregate_Growth', 'GDP_Growth', 
+           'Digital_Use', 'Labour_Participation_Rate', 'Life_Expectancy', 
+           'Literacy_Rate', 'Ageing_Population', 'Population_Density', 
+           'Poverty_Ratio', 'Labour_Gender_Ratio', 'School_Enrollment', 
+           'School_Enrollment_Gender_Ratio', 'Unemployment')
+colnames(dataf) <- names1
+head(dataf)
+
+#Removing variables with low number of observations
+dataf <- subset(dataf, select=-c(Welfare_Aggregate_Growth, Literacy_Rate, Poverty_Ratio))
+summary(dataf)
+head(dataf)
+```
+The ESG variables 'Welfare Aggregate Growth', 'Literacy Rate' and 'Poverty Ratio' were found to contain a low number of observations and were hence removed from the analysis.
+
+Data wrangling was performed on the National Income dataset to contain the country name and the corresponding national income values.
+
+```{r data manipulation - national income, results='hide'}
+#Selecting onyl 2019 values
+NI <- subset(NI, select=c('Data.Source', 'X.61'))
+head(NI)
+
+#Removing top rows (are either empty or not relevant)
+NI <- NI[-(1:4),]
+head(NI)
+
+#renaming the columns
+names3 <- c('Country', 'National_Income')
+colnames(NI) <- names3
+head(NI)
+```
+Data wrangling was performed on the GDP per Capita dataset to contain the country name and the corresponding GDP per Capita values.
+
+```{r data manipulation - GDP per capita, results='hide'}
+#Selecting only 2019 values
+GC <- subset(GC, select=c('Data.Source', 'X.61'))
+head(GC)
+
+#Removing top rows (are either empty or not relevant)
+GC <- GC[-(1:4),]
+head(GC)
+
+#renaming the columns
+names3 <- c('Country', 'GDP_Capita')
+colnames(GC) <- names3
+head(GC)
+```
+Data wrangling was performed on the population growth dataset to contain the country name and the corresponding population growth values.
+
+```{r data manipulation - population growth, results='hide'}
+#Selecting only 2019 values
+PG <- subset(PG, select=c('Country.Name', 'X2019'))
+summary(PG)
+head(PG)
+
+#Changing column names 
+names4 <- c('Country', 'Population_Growth')
+colnames(PG) <- names4
+head(PG)
+```
+Data wrangling was performed on the Sex Ratio dataset to contain the country name and the corresponding sex ratio values.
+
+```{r data manipulation - sex ratio, results='hide'}
+#Selecting only 2019 values
+SR <- subset(SR, select=c('Country.Name', 'X2019..YR2019.'))
+head(SR)
+
+#Changing column names
+names6 <- c('Country', 'Sex_Ratio')
+colnames(SR) <- names6
+head(SR)
+```
+Data wrangling was performed on the CCPI dataset to contain the country name and the corresponding CCPI values. 'Rank_Actual' was chosen instead of 'Rank' since it was consistent and started from 1. The choice of starting 'Rank' from 4 was made by the CCPI. This was done to reflect the lack of climate change mitigation performance by all countries, deeming none of their CCPI scores high enough to occupy the first 3 ranks.
+
+```{r data manipulation CCPI dataset, results='hide'}
+#Selecting only country,  actual rank & score
+#CCPI <- subset(CCPI, select=c('X.1', 'X.2', 'X.3'))
+CCPI <- subset(CCPI, select=c('Actual.Rank', 'Country', 'Score..'))
+summary(CCPI)
+head(CCPI)
+
+#Removing the first 2 rows (Redundant rows)
+#CCPI <- CCPI[-c(1:2),]
+CCPI <- CCPI[-c(1:3),]
+head(CCPI)
+
+#Renaming the column names
+names5 <- c('CCPI_Rank', 'Country', 'CCPI_Score')
+colnames(CCPI) <- names5
+head(CCPI)
+```
+Post data wrangling the ESG, CCPI, National Income, GDP per Capita, Population Growth and Sex Ratio datasets were merged to form the final dataset. The values were converted to numeric type variable and the data was cleaned to remove all NA values.
+
+```{r final dataset, results='hide'}
+#Merging the ESG and CCPI datasets
+Total1<- merge(dataf, CCPI, by.x='Country', all.x=T)
+#Merging Population Growth and Sex Ratio datsets
+Total2 <- merge(SR, PG, by.x='Country', all.x=T)
+#Merging National Income and GDP per Capita Datsets
+Total3 <- merge(NI, GC, by.x='Country', all.x=T)
+#Merging all datsets to create the final datset
+Final <- merge(Total1, Total2, by.x='Country', all.x=T)
+Final <- merge(Final, Total3, by.x='Country', all.x=T)
+summary(Final)
+head(Final)
+str(Final)
+
+#Converting all values in the dataframe to numeric
+Final[,2:17] <- as.data.frame(sapply(Final[,2:17], as.numeric))
+str(Final)
+
+#omitting all NAs in the dataframe 
+Final <- na.omit(Final)
+```
+The final dataset contained the values of 14 socio-economic and demographic variables, and CCPI rank and score for 48 countries. 
+
+A linear model was chosen to study the effect of socio-economic and demographic variables on the CCPI scores of the countries. All the variables were checked for outliers.
+
+```{r Checking linear model conditions - Plotting outliers, echo=TRUE}
+par(mfrow=c(2,2))
+
+#Plotting outliers 
+boxplot(Final$CCPI_Score)
+title(xlab='CCPI Score')
+#No outliers
+#2 outliers
+
+boxplot(Final$School_Enrollment)
+title(xlab='School Enrollment Ratio')
+#Few outliers (logical)
+
+boxplot(Final$Digital_Use)
+title(xlab='Digital Literacy')
+#2 outliers (logical)
+
+boxplot(Final$School_Enrollment_Gender_Ratio)
+title(xlab='School Enrollment Gender Ratio')
+#1 outlier (logical)
+
+boxplot(Final$Labour_Participation_Rate)
+title(xlab = 'Labour Force Participation Rate')
+#2 outliers (logical)
+
+boxplot(Final$Unemployment)
+title(xlab = 'Unemployment')
+#4 outliers (logical)
+
+boxplot(Final$Labour_Gender_Ratio)
+title(xlab='Gender Ratio of Labour Participation')
+#Few outliers (logical)
+
+boxplot(Final$GDP_Growth)
+title(xlab='GDP Growth')
+#No outliers
+
+boxplot(Final$National_Income)
+title(xlab='National Income Per Capita')
+#No outliers
+
+boxplot(Final$GDP_Capita)
+title(xlab='GDP per Capita')
+#1 outlier (logical)
+
+boxplot(Final$Life_Expectancy)
+title(xlab='Life Expectancy')
+#1 outliers (logical)
+
+boxplot(Final$Ageing_Population)
+title(xlab='Ageing Population')
+#No outliers
+
+boxplot(Final$Sex_Ratio)
+title(xlab='Sex Ratio')
+#3 outliers (logical)
+
+boxplot(Final$Population_Growth)
+title(xlab='Population Growth')
+#No outliers
+
+boxplot(Final$Population_Density)
+title(xlab='Population Density')
+#Few outliers (logical)
+```
+Outliers were found for the variables 'School_Enrollment', 'Digital_Use', 'School_Enrollment_Gender_Ratio', 'Labour_Participation_Rate', 'Unemployment', 'Labour_Gender_Ratio', 'GDP_per_Capita', 'Life_Expectancy', 'Sex_Ratio', and 'Population_Density'. The outliers were checked for abnormalities. All were found to be logical and hence were retained.
+
+The homogeneity of the data was checked for all variables.
+
+```{r checking linear model condition - homogeneity, echo=TRUE}
+while (!is.null(dev.list()))  dev.off()
+
+#Checking Homogeneity of Variances 
+var(Final$CCPI_Score)
+var(Final$Digital_Use, na.rm=T)
+var(Final$School_Enrollment, na.rm=T)
+var(Final$School_Enrollment_Gender_Ratio, na.rm=T)
+var(Final$Labour_Participation_Rate, na.rm=T)
+var(Final$Unemployment, na.rm=T)
+var(Final$Labour_Gender_Ratio, na.rm=T)
+var(Final$GDP_Growth, na.rm=T)
+var(Final$GDP_Capita, na.rm=T)
+var(Final$National_Income, na.rm=T)
+var(Final$Life_Expectancy, na.rm=T)
+var(Final$Ageing_Population, na.rm=T)
+var(Final$Sex_Ratio, na.rm=T)
+var(Final$Population_Growth, na.rm=T)
+var(Final$Population_Density, na.rm=T)
+#Doesn't satisfy conditions of homogeneity 
+#Needs to be scaled 
+```
+The conditions for homogeneity were not satisfied by the variables. The variables would need to be scaled.
+
+The conditions of normality were checked for the variables. 
+
+```{r checking linear model conditions - normal distribution, echo=TRUE}
+par(mfrow=c(2,2))
+
+#Checking for normal distribution
+
+hist(Final$CCPI_Score)
+#normal 
+
+hist(Final$School_Enrollment)
+#normal (barring outliers)
+
+hist(Final$Digital_Use)
+#left-skewed data 
+
+hist(Final$School_Enrollment_Gender_Ratio)
+#normal
+
+hist(Final$Labour_Participation_Rate)
+#left-skewed
+
+hist(Final$Unemployment)
+#right-skewed
+
+hist(Final$Labour_Gender_Ratio)
+#left skewed
+
+hist(Final$GDP_Capita)
+#right skewed
+
+hist(Final$GDP_Growth)
+#normal 
+
+hist(Final$National_Income)
+#right-skewed
+
+hist(Final$Life_Expectancy)
+#left skewed
+
+hist(Final$Ageing_Population)
+#normal 
+
+hist(Final$Sex_Ratio)
+#normal (barring outliers) 
+
+hist(Final$Population_Growth)
+#normal 
+
+hist(Final$Population_Density)
+#right skewed
+```
+Variables 'Digital_Use', 'Labour_Participation_Rate', 'Labour_Gender_Ratio' and 'Life_Expectancy' were found to be left skewed while variables 'Unemployment', 'GDP_Capita', 'National_Income' and 'Population_Density were found to be right-skewed. The rest of the variables were found to contain a roughly normal distribution. The variables with skewed data should be kept in mind while checking the residual plots of the linear model. 
+
+The variables were checked for data points containing 0s. 
+
+```{r linear model conditions - zeroes, echo=TRUE}
+colSums(Final==0)
+```
+There are no 0s in the dataframe. 
+
+The collinearity among the explanatory variables was checked using the functions corr and variance inflation factor (VIF). 
+
+```{r checking linear model conditions - collinearity/VIF, echo=TRUE}
+#Checking for collinearity
+pairs(Final[-c(1,12,13)])
+cor(Final[-c(1,12,13)], y=NULL, use='complete.obs')
+
+#Calculating VIF
+vif(Final[-c(1,12,13)])
+#Dropping National_Income
+vif(Final[-c(1,12:13,16)])
+#Dropping Ageing Population
+vif(Final[-c(1,6,12:13,16)])
+#Dropping Labour Gender Ratio
+vif(Final[-c(1,6,8,12:13,16)])
+#All good
+```
+Choosing a corr > 0.75 to be strong, the variable pairs 'Labour_Participation_Rate' and 'Labour_Gender_Ratio'; and 'GDP_Capita' and 'National_Income' were found to have a strong correlation. With the consideration of VIF > 5 indicating high correlation, the variables 'National_Income', 'Ageing_Population' and 'Labour_Gender_Ratio' were found to have a high correlation. Therefore, the variables 'National_Income', 'Ageing_Population' and 'Labour_Gender_Ratio' were omitted from the linear model.
+
+A simple linear regression was performed to investigate the effects of socio-economic and demographic variables on the CCPI scores of countries. All explanatory variables were scaled. Backwards model selection using AIC was performed to obtain the simplest significant model. The model diagnostic plots were checked.
+
+```{r AIC Selection Approach, echo=TRUE}
+#Upper model
+M1 <- lm(CCPI_Score ~ scale(School_Enrollment) + scale(Digital_Use) + 
+              scale(School_Enrollment_Gender_Ratio) + 
+              scale(Labour_Participation_Rate) + scale(Unemployment) + 
+              scale(GDP_Growth) + scale(GDP_Capita)  + scale(Life_Expectancy) + 
+              scale(Sex_Ratio) + scale(Population_Growth) + 
+              scale(Population_Density), data = Final)
+#Backwards model selection
+M2<-step(M1, direction = "backward", scope = list(lower=~1, 
+              upper=~scale(School_Enrollment) + scale(Digital_Use) + 
+              scale(School_Enrollment_Gender_Ratio) + 
+              scale(Labour_Participation_Rate) + scale(Unemployment) + 
+              scale(GDP_Growth) + scale(GDP_Capita)  + scale(Life_Expectancy) + 
+              scale(Sex_Ratio) + scale(Population_Growth) + 
+              scale(Population_Density))) 
+
+#Model Interpretation
+summary(M2)
+
+#Model diagnostic plots
+plot(M2)
+#Residual plots look good 
+#QQ (normality plot) looks good
+
+#Fitting a model without scaled variables (for plotting)
+fit <- lm(CCPI_Score ~ School_Enrollment + Digital_Use + GDP_Capita + 
+            Population_Growth, data = Final)
+
+#Predicted values of CCPI score for School Enrollment (with other effects controlled)
+G1 <- ggpredict(fit, terms = 'School_Enrollment')
+#plotting using ggpredict (School Enrolment)
+D1 <- ggplot(G1, aes(x, predicted)) + geom_line(colour = 'sienna1', size=1) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.3) +
+  ggtitle('CCPI Score vs Ratio of School Enrolment') + 
+  xlab('Ratio of School Enrolment (%)') +
+  ylab('CCPI Score') +  theme(plot.title = element_text(hjust=0.5, size = 12)) + 
+  theme(axis.title = element_text(size=10)) + ylim(40,70) + xlim(100,110)
+
+#Predicted values of CCPI score for GDP per Capita (with other effects controlled)
+G2 <- ggpredict(fit, terms = 'GDP_Capita')
+#plotting using ggpredict (GDP per Capita)
+D2 <- ggplot(G2, aes(x, predicted)) + geom_line(colour = "sienna1", size=1) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.3) +
+  ggtitle('CCPI Score vs GDP per Capita') + xlab('GDP per Capita (US$)') +
+  ylab('CCPI Score') + theme(plot.title = element_text(hjust=0.5, size = 12)) + 
+  theme(axis.title = element_text(size=10)) + ylim(40,70) + xlim(30000,80000)
+
+#Predicted values of CCPI score for digital usage (with other effects controlled)
+G3 <- ggpredict(fit, terms = 'Digital_Use')
+#plotting using ggpredict (GDP per Capita)
+D3 <- ggplot(G3, aes(x, predicted)) + geom_line(colour = "lightseagreen", size=1) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.3) +
+  ggtitle('CCPI Score vs Digital Technology Usage') + 
+  xlab('Digital Technology Usage (%)') +
+  ylab('CCPI Score') + theme(plot.title = element_text(hjust=0.5, size = 12)) + 
+  theme(axis.title = element_text(size=10)) + ylim(40,70) + xlim(60,90)
+
+#Predicted values of CCPI score for population growth (with other effects controlled)
+G4 <- ggpredict(fit, terms = 'Population_Growth')
+#plotting using ggpredict (GDP per Capita)
+D4 <- ggplot(G4, aes(x, predicted)) + 
+  geom_line(colour = "lightseagreen", size=1) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.3) +
+  ggtitle('CCPI Score vs Population Growth') + 
+  xlab('Population Growth (%)') +
+  ylab('CCPI Score') +  theme(plot.title = element_text(hjust=0.5, size = 12)) + 
+  theme(axis.title = element_text(size=10)) + ylim(40,70) + xlim(-0.25,1)
+
+#combining the plots
+plot_grid(D1, D2, D3, D4, labels = "AUTO", ncol = 2)
+```
+From the simplest significant regression model, School Enrollment, Digital Literacy, GDP per Capita and Population Growth were found to have a significant effect on CCPI Scores. All the model diagnostic plots satisfied the conditions of the linear model. Results further interpreted in the report. 
