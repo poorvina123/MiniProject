@@ -22,9 +22,6 @@ The dataset containing selected Environmental, Social and Governance (ESG) varia
 World Bank DataBank: https://databank.worldbank.org/source/environment-social-and-governance?preview=on. 
 CCPI Website: https://ccpi.org/download/climate-change-performance-index-2023/
 
-Variables obtained from World Bank ESG Data Portal: (INSERT)
-Socio-economic variables obtained from World Bank DataBank: National Income per Capita (US$), GDP per Capita (US$), Population Growth (%), Sex Ratio
-
 ```{r input datasets, results='hide'}
 #setting working directory
 setwd("/Users/tp/Desktop/Miniproject")
